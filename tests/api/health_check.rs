@@ -1,18 +1,7 @@
-use std::net::SocketAddr;
-
 use axum::{body::Body, http::Request};
 use http_body_util::BodyExt;
-use hyper_util::client::legacy::{connect::HttpConnector, Client};
-use hyper_util::rt::TokioExecutor;
-use zero2prod::{
-    app::{get_listener, run},
-    router::app_routes,
-};
 
-struct TestClient {
-    client: Client<HttpConnector, Body>,
-    addr: SocketAddr,
-}
+use crate::helpers::create_test_client;
 
 #[tokio::test]
 async fn health_check_works() {
@@ -39,19 +28,4 @@ async fn health_check_works() {
         .expect("Failed to get response body")
         .to_bytes();
     assert!(body.is_empty());
-}
-
-async fn create_test_client() -> TestClient {
-    let listener = get_listener("0.0.0.0:0")
-        .await
-        .expect("Failed to bind address");
-    let local_addr = listener.local_addr().expect("Failed to get local address");
-    let app = app_routes();
-
-    tokio::spawn(async move { run(listener, app).await });
-    let client = Client::builder(TokioExecutor::new()).build_http::<Body>();
-    TestClient {
-        addr: local_addr,
-        client,
-    }
 }
