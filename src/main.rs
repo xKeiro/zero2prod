@@ -1,8 +1,13 @@
-use zero2prod::router::app_routes;
+use zero2prod::{
+    app::{get_listener, run},
+    router::app_routes,
+};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), std::io::Error> {
+    let listener = get_listener("0.0.0.0:3000")
+        .await
+        .expect("Failed to bind address");
     let app = app_routes();
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    run(listener, app).await
 }
