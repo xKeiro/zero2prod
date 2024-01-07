@@ -1,5 +1,6 @@
 use axum::Form;
 
+#[allow(dead_code)]
 #[derive(serde::Deserialize)]
 pub struct FormData {
     email: String,
