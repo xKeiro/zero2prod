@@ -1,25 +1,19 @@
-use axum::{body::Body, http::Request};
-
-use crate::helpers::create_test_client;
+use crate::helpers::spawn_app;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
-    let test_client = create_test_client().await;
+    let address = spawn_app().await;
+    let client = reqwest::Client::new();
     // Act
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
-    let response = test_client
-        .client
-        .request(
-            Request::builder()
-                .method("POST")
-                .uri(&format!("http://{}/subscriptions", test_client.addr))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(Body::from(body)) // Convert body to axum::body::Body
-                .expect("Failed to execute request."),
-        )
+    let response = client
+        .post(&format!("http://{}/subscriptions", address))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .send()
         .await
-        .expect("Failed to get response");
+        .expect("Failed to execute request.");
     // Assert
     assert_eq!(200, response.status().as_u16());
 }
@@ -27,7 +21,8 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[tokio::test]
 async fn subscribe_returns_a_422_when_data_is_missing() {
     // Arrange
-    let test_client = create_test_client().await;
+    let address = spawn_app().await;
+    let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
         ("email=ursula_le_guin%40gmail.com", "missing the name"),
@@ -35,18 +30,13 @@ async fn subscribe_returns_a_422_when_data_is_missing() {
     ];
     for (invalid_body, error_message) in test_cases {
         // Act
-        let response = test_client
-            .client
-            .request(
-                Request::builder()
-                    .method("POST")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .uri(&format!("http://{}/subscriptions", test_client.addr))
-                    .body(Body::from(invalid_body))
-                    .expect("Failed to build request"),
-            )
+        let response = client
+            .post(&format!("http://{}/subscriptions", address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(invalid_body)
+            .send()
             .await
-            .expect("Failed to get response");
+            .expect("Failed to execute request.");
         // Assert
         assert_eq!(
             422,

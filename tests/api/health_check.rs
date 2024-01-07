@@ -1,31 +1,17 @@
-use axum::{body::Body, http::Request};
-use http_body_util::BodyExt;
-
-use crate::helpers::create_test_client;
+use crate::helpers::spawn_app;
 
 #[tokio::test]
 async fn health_check_works() {
     // Arrange
-    let test_client = create_test_client().await;
+    let address = spawn_app().await;
+    let client = reqwest::Client::new();
     // Act
-    let response = test_client
-        .client
-        .request(
-            Request::builder()
-                .uri(format!("http://{}/health_check", test_client.addr))
-                .header("Host", "localhost")
-                .body(Body::empty())
-                .expect("Failed to build request"),
-        )
+    let response = client
+        .get(&format!("http://{}/health_check", &address))
+        .send()
         .await
-        .expect("Failed to get response");
+        .expect("Failed to execute request.");
     // Assert
     assert!(response.status().is_success());
-    let body = response
-        .into_body()
-        .collect()
-        .await
-        .expect("Failed to get response body")
-        .to_bytes();
-    assert!(body.is_empty());
+    assert_eq!(Some(0), response.content_length());
 }
