@@ -1,10 +1,12 @@
-use crate::helpers::spawn_app;
+use crate::helpers::{get_db_connection, spawn_app};
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
     let address = spawn_app().await;
     let client = reqwest::Client::new();
+    let mut connection = get_db_connection().await;
+
     // Act
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
@@ -16,6 +18,13 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .expect("Failed to execute request.");
     // Assert
     assert_eq!(200, response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch saved subscription.");
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
 }
 
 #[tokio::test]
