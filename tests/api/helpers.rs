@@ -3,7 +3,8 @@ use std::net::SocketAddr;
 use sqlx::{Connection, PgConnection};
 use zero2prod::{
     app::{get_listener, run},
-    router::app_routes, configuration::get_configuration,
+    configuration::get_configuration,
+    router::app_routes,
 };
 
 pub async fn spawn_app() -> SocketAddr {
@@ -17,7 +18,7 @@ pub async fn spawn_app() -> SocketAddr {
     local_addr
 }
 
-pub async fn get_db_connection() -> PgConnection{
+pub async fn get_db_connection() -> PgConnection {
     let configuration = get_configuration().expect("Failed to read configuration");
     let connection_string = configuration.database.connection_string();
     // The `Connection` trait MUST be in scope for us to invoke
