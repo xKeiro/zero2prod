@@ -1,31 +1,26 @@
-# We use the latest Rust stable release as base image
-FROM rust:1.75.0
-# Let's switch our working directory to `app` (equivalent to `cd app`)
-# The `app` folder will be created for us by Docker in case it does not
-# exist already.
-WORKDIR /app
-# Install the required system dependencies for our linking configuration
-RUN apt update
-RUN apt install clang  -y && \
-    git clone https://github.com/rui314/mold.git && \
-    mkdir mold/build && \
-    cd mold/build && \
-    git checkout v2.4.0 && \
-    ../install-build-deps.sh && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=c++ .. && \
-    cmake --build . -j $(nproc) && \
-    cmake --build . --target install
-
-# Copy all files from our working environment to our Docker image
+FROM clux/muslrust:stable AS planner
+RUN cargo install cargo-chef
 COPY . .
-# We need to set the `SQLX_OFFLINE` environment variable to `true` to
-# use the offline mode of sqlx-cli. This is required to make it work
-# with Docker.
+RUN cargo chef prepare --recipe-path recipe.json
+
+
+FROM clux/muslrust:stable AS cacher
+RUN cargo install cargo-chef
+COPY --from=planner /volume/recipe.json recipe.json
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
+
+
+FROM clux/muslrust:stable AS builder
+COPY . .
+COPY --from=cacher /volume/target target
+COPY --from=cacher /root/.cargo /root/.cargo
 ENV SQLX_OFFLINE true
-# Let's build our binary!
-# We'll use the release profile to make it faaaast
-RUN cargo build --release
-# Let's set the default environment to `production`
+RUN cargo build --bin zero2prod --release --target x86_64-unknown-linux-musl
+
+
+# Need cacerts
+FROM gcr.io/distroless/static:nonroot
+COPY --from=builder --chown=nonroot:nonroot /volume/target/x86_64-unknown-linux-musl/release/zero2prod /app/zero2prod
+COPY configuration configuration
 ENV APP_ENVIRONMENT production
-# When `docker run` is executed, launch the binary!
-ENTRYPOINT ["./target/release/zero2prod"]
+ENTRYPOINT ["/app/zero2prod"]
