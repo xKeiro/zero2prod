@@ -10,8 +10,7 @@ async fn main() -> std::io::Result<()> {
     let subscriber = get_subscriber("zero2prod".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
     let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection_pool = PgPool::connect(&configuration.database.connection_string())
-        .await
+    let connection_pool = PgPool::connect_lazy(&configuration.database.connection_string())
         .expect("Failed to connect to Postgres.");
 
     // Here we choose to bind explicitly to localhost, 127.0.0.1, for security
