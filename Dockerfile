@@ -1,6 +1,6 @@
 FROM clux/muslrust:stable AS planner
 RUN cargo install cargo-chef
-COPY . .
+COPY Cargo.* .
 RUN cargo chef prepare --recipe-path recipe.json
 
 
